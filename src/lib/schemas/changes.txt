@@ -1,0 +1,185 @@
+SQLite Schema Adaptations
+==========================
+
+This document describes how the PostgreSQL schema has been adapted for SQLite compatibility.
+
+MAJOR CHANGES:
+--------------
+
+1. AUTO-INCREMENT COLUMNS
+   PostgreSQL: SERIAL PRIMARY KEY
+   SQLite: INTEGER PRIMARY KEY AUTOINCREMENT
+   Impact: Same functionality, different syntax
+
+2. ENUM TYPES
+   PostgreSQL: CREATE TYPE comic_type AS ENUM ('manga', 'webtoon', 'western')
+   SQLite: TEXT with CHECK constraint (CHECK (comic_type IN ('manga', 'webtoon', 'western')))
+   Impact: Values validated at insert/update time, not at schema creation
+
+3. ARRAY COLUMNS
+   PostgreSQL: VARCHAR(50)[] DEFAULT '{}'
+   SQLite: TEXT DEFAULT '[]' (stored as JSON string)
+   Impact: 
+   - Arrays must be stored as JSON strings
+   - Querying requires JSON functions (json_extract, json_array_append, etc.)
+   - Tag/genre validation must be done in application code, not database constraints
+   - No native array operators (@>, <@, etc.)
+
+4. TIMESTAMP WITH TIME ZONE
+   PostgreSQL: TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+   SQLite: TEXT DEFAULT (datetime('now')) (ISO8601 format)
+   Impact: 
+   - Stored as ISO8601 strings (e.g., '2024-01-01 12:00:00')
+   - Timezone handling must be done in application code
+
+5. BOOLEAN TYPES
+   PostgreSQL: BOOLEAN DEFAULT true/false
+   SQLite: INTEGER DEFAULT 1/0
+   Impact: Use 1 for true, 0 for false
+
+6. DECIMAL/NUMERIC TYPES
+   PostgreSQL: DECIMAL(10,2)
+   SQLite: REAL
+   Impact: Similar precision, but SQLite REAL is floating point
+
+7. FOREIGN KEY CONSTRAINTS
+   PostgreSQL: Enabled by default
+   SQLite: Must be explicitly enabled with PRAGMA foreign_keys = ON
+   Impact: Must run PRAGMA statement at connection start
+
+8. DO BLOCKS (Migration Scripts)
+   PostgreSQL: DO $$ BEGIN ... END $$; (procedural code blocks)
+   SQLite: NOT SUPPORTED
+   Impact: 
+   - Migration scripts using DO blocks are removed
+   - Column renames (video_address → master_playlist_address) must be done manually
+   - Use: ALTER TABLE movies RENAME COLUMN video_address TO master_playlist_address;
+
+9. STORED FUNCTIONS
+   PostgreSQL: CREATE OR REPLACE FUNCTION ... LANGUAGE plpgsql
+   SQLite: NOT SUPPORTED
+   Impact: All functions removed:
+   - add_tag_to_comic(), remove_tag_from_comic()
+   - get_comics_by_tag()
+   - add_tag_to_movie(), remove_tag_from_movie()
+   - get_movies_by_tag()
+   - add_genre_to_movie(), remove_genre_from_movie()
+   - get_movies_by_genre()
+   - add_tag_to_tv_show(), remove_tag_from_tv_show()
+   - get_tv_shows_by_tag()
+   
+   These must be implemented in application code using JSON functions:
+   - json_extract() - Extract values from JSON
+   - json_array_append() - Append to JSON array
+   - json_remove() - Remove from JSON array
+   - json_array_length() - Get array length
+
+10. CHECK CONSTRAINTS WITH SUBQUERIES
+    PostgreSQL: CHECK (tags <@ (SELECT array_agg(tag_name) FROM tag_types WHERE is_active = true))
+    SQLite: NOT SUPPORTED (CHECK constraints cannot contain subqueries)
+    Impact:
+    - Tag/genre validation removed from CHECK constraints
+    - Validation must be done in application code before insert/update
+    - Can use triggers for validation, but simpler to do in application
+
+11. GIN INDEXES (Generalized Inverted Index)
+    PostgreSQL: CREATE INDEX ... USING GIN (tags)
+    SQLite: NOT SUPPORTED
+    Impact:
+    - Array search performance will be slower
+    - Tag/genre queries must use JSON functions and full table scans or application-level filtering
+    - Consider creating separate junction tables for better performance if needed
+
+12. UNIQUE CONSTRAINTS WITH NULL HANDLING
+    PostgreSQL: UNIQUE(movie_id, version_number) handles NULLs per SQL standard
+    SQLite: 
+    - NULL values are considered distinct in unique indexes
+    - Partial unique indexes with WHERE clauses have limitations
+    - Unique constraints on video_versions table removed
+    Impact: Uniqueness enforcement for video_versions must be done at application level
+    The CHECK constraint ensures only one parent (movie_id OR tv_episode_id) is set
+
+13. ON CONFLICT DO NOTHING
+    PostgreSQL: ON CONFLICT (tag_name) DO NOTHING
+    SQLite: INSERT OR IGNORE (equivalent behavior)
+    Impact: Same functionality, different syntax
+
+14. COMPOSITE UNIQUE CONSTRAINTS ON VIDEO_VERSIONS
+    PostgreSQL: Can have UNIQUE constraints that work with NULLs
+    SQLite: Partial unique indexes with WHERE clauses
+    Note: SQLite 3.8.0+ supports partial indexes, but unique constraints with NULL need WHERE clauses
+    The schema uses UNIQUE constraints with WHERE clauses for conditional uniqueness
+
+FUNCTIONALITY PRESERVED:
+------------------------
+
+- All tables and columns are preserved
+- Foreign key relationships maintained
+- Triggers for chapter count updates
+- Basic indexes for common queries
+- Unique constraints on primary keys and composite keys
+- NOT NULL constraints
+- Default values
+
+PERFORMANCE CONSIDERATIONS:
+---------------------------
+
+1. Array/JSON Operations:
+   - Tag and genre queries will be slower without GIN indexes
+   - Consider implementing separate junction tables if performance becomes an issue
+   - Use json_extract() with proper indexes on extracted values if needed
+
+2. Full-Text Search:
+   - For tag/genre searches, consider implementing a separate search table
+   - Or use application-level filtering with JSON functions
+
+3. Migrations:
+   - Column renames require creating new table, copying data, dropping old table
+   - SQLite doesn't support ALTER TABLE DROP COLUMN directly (requires table recreation)
+
+APPLICATION CODE REQUIREMENTS:
+------------------------------
+
+1. Enable foreign keys: PRAGMA foreign_keys = ON (at connection start)
+
+2. Tag/Genre Validation:
+   - Check tag/genre exists in tag_types/genre_types tables before insert
+   - Use JSON functions to manipulate tag/genre arrays
+
+3. Array Operations:
+   - Use json_extract() for reading
+   - Use json_array_append() for adding
+   - Use json_remove() for removing
+   - Example: json_extract(tags, '$[0]') to get first tag
+
+4. Date/Time Handling:
+   - Store as ISO8601 strings: datetime('now')
+   - Parse in application code for timezone-aware operations
+
+5. Boolean Values:
+   - Use 1/0 instead of true/false
+   - Convert in application layer
+
+EXAMPLE QUERIES FOR SQLITE:
+----------------------------
+
+-- Add tag to comic (application code):
+UPDATE comics 
+SET tags = json_array_append(
+    COALESCE(tags, '[]'), 
+    '$', 
+    json_quote('NewTag')
+)
+WHERE comic_id = ?;
+
+-- Find comics by tag:
+SELECT * FROM comics 
+WHERE json_extract(tags, '$') LIKE '%"TagName"%';
+
+-- Check if tag exists:
+SELECT 1 FROM tag_types WHERE tag_name = ? AND is_active = 1;
+
+-- Get movies with specific genre:
+SELECT * FROM movies 
+WHERE json_extract(genres, '$') LIKE '%"Action"%';
+

@@ -1,0 +1,187 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { movies } from "@/lib/db/schema";
+import { eq, ilike, and, desc, asc, sql } from "drizzle-orm";
+import { jsonArrayContains, parseJsonArray } from "@/lib/db/sqlite-helpers";
+import {
+  MoviesQueryParamsSchema,
+  MoviesResponseSchema,
+  MovieApiErrorSchema,
+} from "@/lib/schemas/movies";
+import { ZodError } from "zod";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+
+    // Parse and validate query parameters
+    const queryParams = MoviesQueryParamsSchema.parse({
+      page: searchParams.get("page"),
+      itemsPerPage: searchParams.get("itemsPerPage"),
+      tag: searchParams.get("tag"),
+      search: searchParams.get("search"),
+      sort: searchParams.get("sort"),
+    });
+
+    const { page, itemsPerPage, tag, search, sort } = queryParams;
+
+    // Build conditions array
+    const conditions = [];
+
+    if (search !== null && search !== undefined) {
+      conditions.push(ilike(movies.title, `%${search}%`));
+    }
+
+    if (tag !== null && tag !== undefined) {
+      conditions.push(jsonArrayContains(movies.tags, tag));
+    }
+
+    // Build the where clause
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count for pagination
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(movies)
+      .where(whereClause);
+
+    const totalItems = parseInt(countResult[0]?.count?.toString() || "0");
+
+    // Determine sorting
+    let orderBy;
+    switch (sort) {
+      case "az-asc":
+        orderBy = asc(movies.title);
+        break;
+      case "za-desc":
+        orderBy = desc(movies.title);
+        break;
+      case "date-updated":
+        orderBy = desc(movies.updatedAt);
+        break;
+      case "views":
+        orderBy = desc(movies.views);
+        break;
+      default:
+        orderBy = asc(movies.title);
+    }
+
+    // Get movies with pagination
+    const moviesResult = await db
+      .select()
+      .from(movies)
+      .where(whereClause)
+      .orderBy(orderBy)
+      .limit(itemsPerPage)
+      .offset((page - 1) * itemsPerPage);
+
+    // Transform field names to match schema
+    const moviesWithFormattedData = moviesResult.map((movie) => ({
+      movie_id: movie.movieId,
+      title: movie.title,
+      thumbnail_address: movie.thumbnailAddress,
+      sprite_address: movie.spriteAddress,
+      video_address: movie.masterPlaylistAddress,
+      tags: parseJsonArray(movie.tags as string),
+      views: movie.views,
+      updated_at: movie.updatedAt,
+    }));
+
+    // Get all unique tags with counts
+    // SQLite doesn't have unnest, so we need to fetch all movies and process tags in JavaScript
+    const allMoviesForTags = await db
+      .select({
+        tags: movies.tags,
+      })
+      .from(movies)
+      .where(sql`tags IS NOT NULL AND json_array_length(tags) > 0`);
+
+    // Process tags manually
+    const tagCounts: Record<string, number> = {};
+    allMoviesForTags.forEach((row) => {
+      const tagArray = parseJsonArray(row.tags as string);
+      tagArray.forEach((tag) => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    });
+
+    const tags = Object.entries(tagCounts)
+      .map(([label, count]) => ({
+        id: label.toLowerCase().replace(/\s+/g, "-"),
+        label,
+        count,
+      }))
+      .sort((a, b) => {
+        // Sort by count descending, then by label ascending
+        if (b.count !== a.count) {
+          return b.count - a.count;
+        }
+        return a.label.localeCompare(b.label);
+      });
+
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    // Prepare response data
+    const responseData = {
+      movies: moviesWithFormattedData,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems,
+        itemsPerPage,
+      },
+      tags,
+    };
+
+    // Validate response data with detailed error logging
+    const validationResult = MoviesResponseSchema.safeParse(responseData);
+
+    if (!validationResult.success) {
+      console.error(
+        "Response validation failed:",
+        JSON.stringify(validationResult.error.issues, null, 2)
+      );
+      console.error(
+        "Sample movie data:",
+        JSON.stringify(moviesWithFormattedData[0], null, 2)
+      );
+
+      // Return detailed error for debugging
+      return NextResponse.json(
+        {
+          error: "Response validation failed",
+          details: validationResult.error.issues,
+          sampleData: moviesWithFormattedData[0],
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(validationResult.data);
+  } catch (error) {
+    console.error("Error fetching movies:", error);
+
+    // Handle Zod validation errors
+    if (error instanceof ZodError) {
+      const errorResponse = MovieApiErrorSchema.parse({
+        error: "Invalid request parameters",
+        details: error.issues
+          .map((e: any) => `${e.path.join(".")}: ${e.message}`)
+          .join(", "),
+      });
+      return NextResponse.json(errorResponse, { status: 400 });
+    }
+
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    const errorResponse = MovieApiErrorSchema.parse({
+      error: "Failed to fetch movies",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
+  }
+}

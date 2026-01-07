@@ -15,13 +15,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     // Parse and validate query parameters
-    const queryParams = MoviesQueryParamsSchema.parse({
-      page: searchParams.get("page"),
-      itemsPerPage: searchParams.get("itemsPerPage"),
-      tag: searchParams.get("tag"),
-      search: searchParams.get("search"),
-      sort: searchParams.get("sort"),
-    });
+    let queryParams;
+    try {
+      queryParams = MoviesQueryParamsSchema.parse({
+        page: searchParams.get("page"),
+        itemsPerPage: searchParams.get("itemsPerPage"),
+        tag: searchParams.get("tag"),
+        search: searchParams.get("search"),
+        sort: searchParams.get("sort"),
+      });
+    } catch (parseError) {
+      console.error("Query parameter validation error:", parseError);
+      throw parseError;
+    }
 
     const { page, itemsPerPage, tag, search, sort } = queryParams;
 
@@ -40,12 +46,24 @@ export async function GET(request: NextRequest) {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count for pagination
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(movies)
-      .where(whereClause);
-
-    const totalItems = parseInt(countResult[0]?.count?.toString() || "0");
+    let countResult;
+    let totalItems = 0;
+    try {
+      console.log("🔍 Query parameters:", { page, itemsPerPage, tag, search, sort });
+      console.log("🔍 Where clause:", whereClause ? "has conditions" : "no conditions");
+      
+      countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(movies)
+        .where(whereClause);
+      
+      console.log("📊 Count query result:", JSON.stringify(countResult, null, 2));
+      totalItems = parseInt(countResult[0]?.count?.toString() || "0");
+      console.log("📊 Total items:", totalItems);
+    } catch (countError) {
+      console.error("Error getting movie count:", countError);
+      throw new Error(`Failed to count movies: ${countError instanceof Error ? countError.message : "Unknown error"}`);
+    }
 
     // Determine sorting
     let orderBy;
@@ -67,34 +85,57 @@ export async function GET(request: NextRequest) {
     }
 
     // Get movies with pagination
-    const moviesResult = await db
-      .select()
-      .from(movies)
-      .where(whereClause)
-      .orderBy(orderBy)
-      .limit(itemsPerPage)
-      .offset((page - 1) * itemsPerPage);
+    let moviesResult;
+    try {
+      moviesResult = await db
+        .select()
+        .from(movies)
+        .where(whereClause)
+        .orderBy(orderBy)
+        .limit(itemsPerPage)
+        .offset((page - 1) * itemsPerPage);
+      
+      console.log("📊 Database query results:");
+      console.log("  - Total movies found:", moviesResult.length);
+      console.log("  - Raw database results:", JSON.stringify(moviesResult, null, 2));
+    } catch (queryError) {
+      console.error("Error fetching movies:", queryError);
+      throw new Error(`Failed to fetch movies: ${queryError instanceof Error ? queryError.message : "Unknown error"}`);
+    }
 
     // Transform field names to match schema
-    const moviesWithFormattedData = moviesResult.map((movie) => ({
-      movie_id: movie.movieId,
-      title: movie.title,
-      thumbnail_address: movie.thumbnailAddress,
-      sprite_address: movie.spriteAddress,
-      video_address: movie.masterPlaylistAddress,
-      tags: parseJsonArray(movie.tags as string),
-      views: movie.views,
-      updated_at: movie.updatedAt,
-    }));
+    const moviesWithFormattedData = moviesResult.map((movie) => {
+      const formatted = {
+        movie_id: movie.movieId,
+        title: movie.title,
+        thumbnail_address: movie.thumbnailAddress,
+        sprite_address: movie.spriteAddress,
+        video_address: movie.masterPlaylistAddress,
+        tags: parseJsonArray(movie.tags as string),
+        views: movie.views,
+        updated_at: movie.updatedAt,
+      };
+      console.log("📝 Formatted movie:", JSON.stringify(formatted, null, 2));
+      return formatted;
+    });
+    
+    console.log("✅ Formatted movies array:", JSON.stringify(moviesWithFormattedData, null, 2));
 
     // Get all unique tags with counts
     // SQLite doesn't have unnest, so we need to fetch all movies and process tags in JavaScript
-    const allMoviesForTags = await db
-      .select({
-        tags: movies.tags,
-      })
-      .from(movies)
-      .where(sql`tags IS NOT NULL AND json_array_length(tags) > 0`);
+    let allMoviesForTags: Array<{ tags: string }> = [];
+    try {
+      allMoviesForTags = await db
+        .select({
+          tags: movies.tags,
+        })
+        .from(movies)
+        .where(sql`tags IS NOT NULL AND json_array_length(tags) > 0`);
+    } catch (tagError) {
+      console.error("Error fetching tags:", tagError);
+      // If tag query fails, just use empty tags array
+      allMoviesForTags = [];
+    }
 
     // Process tags manually
     const tagCounts: Record<string, number> = {};
@@ -133,30 +174,39 @@ export async function GET(request: NextRequest) {
       tags,
     };
 
+    console.log("📦 Response data before validation:");
+    console.log("  - Movies count:", responseData.movies.length);
+    console.log("  - Total items:", responseData.pagination.totalItems);
+    console.log("  - Total pages:", responseData.pagination.totalPages);
+    console.log("  - Tags count:", responseData.tags.length);
+    if (responseData.movies.length > 0) {
+      console.log("  - Sample movie:", JSON.stringify(responseData.movies[0], null, 2));
+    } else {
+      console.log("  - ⚠️ No movies in response data");
+    }
+
     // Validate response data with detailed error logging
     const validationResult = MoviesResponseSchema.safeParse(responseData);
 
     if (!validationResult.success) {
-      console.error(
-        "Response validation failed:",
-        JSON.stringify(validationResult.error.issues, null, 2)
-      );
-      console.error(
-        "Sample movie data:",
-        JSON.stringify(moviesWithFormattedData[0], null, 2)
-      );
+      console.error("❌ Response validation failed:");
+      console.error("  - Validation errors:", JSON.stringify(validationResult.error.issues, null, 2));
+      if (moviesWithFormattedData.length > 0) {
+        console.error("  - Sample movie data:", JSON.stringify(moviesWithFormattedData[0], null, 2));
+      }
 
       // Return detailed error for debugging
       return NextResponse.json(
         {
           error: "Response validation failed",
           details: validationResult.error.issues,
-          sampleData: moviesWithFormattedData[0],
+          sampleData: moviesWithFormattedData[0] || null,
         },
         { status: 500 }
       );
     }
 
+    console.log("✅ Validation passed, returning response");
     return NextResponse.json(validationResult.data);
   } catch (error) {
     console.error("Error fetching movies:", error);

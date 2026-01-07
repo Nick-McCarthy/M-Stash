@@ -53,7 +53,10 @@ export const MoviesQueryParamsSchema = z.object({
   itemsPerPage: z.coerce.number().int().positive().max(100).default(25),
   tag: z.string().nullish(), // Filter by tag
   search: z.string().nullish(), // Search in title
-  sort: MovieSortOptionSchema.default("az-asc"),
+  sort: z.preprocess(
+    (val) => (val === null || val === undefined ? "az-asc" : val),
+    MovieSortOptionSchema
+  ),
 });
 
 export const MoviesResponseSchema = z.object({

@@ -1,8 +1,0 @@
-{
-  "host": "localhost",
-  "port": "5432",
-  "database": "application_db",
-  "username": "postgres",
-  "ssl": false,
-  "configuredAt": "2025-10-20T04:59:05.564Z"
-}

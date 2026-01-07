@@ -1,8 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Eye, Clock } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 interface MovieCardProps {
   id: string;
@@ -19,7 +19,6 @@ export default function MovieCard({
   views,
   updatedAt,
 }: MovieCardProps) {
-  const router = useRouter();
   const [imageSrc, setImageSrc] = useState<string>(
     thumbnail && thumbnail.trim() !== "" ? thumbnail : "/placeholder-movie.svg"
   );
@@ -65,15 +64,9 @@ export default function MovieCard({
     });
   };
 
-  const handleCardClick = () => {
-    router.push(`/movie-library/${id}`);
-  };
-
   return (
-    <Card
-      className="group overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.02] p-0 cursor-pointer"
-      onClick={handleCardClick}
-    >
+    <Link href={`/movie-library/${id}`} className="block">
+      <Card className="group overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.02] p-0 cursor-pointer h-full">
       <div className="relative aspect-[2/3] overflow-hidden">
         <Image
           src={imageSrc}
@@ -106,5 +99,6 @@ export default function MovieCard({
         </div>
       </CardContent>
     </Card>
+    </Link>
   );
 }

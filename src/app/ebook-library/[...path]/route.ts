@@ -86,20 +86,63 @@ export async function GET(
     const zip = await JSZip.loadAsync(arrayBuffer);
 
     // Get the requested file from the EPUB archive
-    const file = zip.file(internalPath);
+    // Try multiple path variations for better compatibility
+    let file = zip.file(internalPath);
+
+    if (!file) {
+      // Try without leading slash
+      file = zip.file(internalPath.replace(/^\//, ""));
+    }
 
     if (!file) {
       // Try with leading slash
-      const fileWithSlash = zip.file(`/${internalPath}`);
-      if (!fileWithSlash) {
-        return NextResponse.json(
-          { error: `File not found in EPUB: ${internalPath}` },
-          { status: 404 }
+      file = zip.file(`/${internalPath}`);
+    }
+
+    if (!file) {
+      // Try with case-insensitive search (some EPUBs have inconsistent casing)
+      const allFiles = Object.keys(zip.files);
+      const matchingFile = allFiles.find(
+        (f) =>
+          f.toLowerCase() === internalPath.toLowerCase() ||
+          f.toLowerCase() === `/${internalPath}`.toLowerCase() ||
+          f.toLowerCase() === internalPath.replace(/^\//, "").toLowerCase()
+      );
+      if (matchingFile) {
+        file = zip.file(matchingFile);
+      }
+    }
+
+    // Handle missing files - some are optional (like Apple-specific metadata)
+    if (!file) {
+      console.warn(`File not found in EPUB (may be optional): ${internalPath}`);
+
+      // Return empty XML response for optional metadata files (like Apple iBooks display options)
+      // This prevents 404 errors for files that may not exist in all EPUBs
+      if (
+        internalPath.includes("META-INF") &&
+        internalPath.includes("com.apple")
+      ) {
+        return new NextResponse(
+          '<?xml version="1.0" encoding="UTF-8"?><display_options/>',
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/xml",
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "GET, OPTIONS",
+              "Access-Control-Allow-Headers": "Content-Type",
+              "Cache-Control": "public, max-age=3600",
+            },
+          }
         );
       }
-      // Use the file with slash
-      const fileBuffer = await fileWithSlash.async("nodebuffer");
-      return serveFile(fileBuffer, internalPath);
+
+      // Return 404 for other missing files
+      return NextResponse.json(
+        { error: `File not found in EPUB: ${internalPath}` },
+        { status: 404 }
+      );
     }
 
     // Get the file content as a buffer

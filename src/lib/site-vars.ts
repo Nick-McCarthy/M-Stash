@@ -14,7 +14,7 @@ const navItems = [
   { name: "Comics", href: "/comic-library", icon: ImageIcon },
   { name: "Movies", href: "/movie-library", icon: Clapperboard },
   { name: "TV", href: "/tv-library", icon: Play },
-  { name: "Books", href: "/ebook-library", icon: BookOpen },
+  { name: "Ebooks", href: "/ebook-library", icon: BookOpen },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

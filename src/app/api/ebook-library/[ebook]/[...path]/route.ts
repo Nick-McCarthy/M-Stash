@@ -29,10 +29,12 @@ export async function GET(
 
     const ebookData = ebookResult[0];
 
-    // If no path, return the full EPUB file (fallback to main proxy route)
+    // If no path, return 404 (shouldn't happen for EPUB resources)
     if (!path || path.length === 0) {
-      // This shouldn't happen, but handle it gracefully
-      return NextResponse.redirect(`/api/ebook-library/${ebookId}/proxy`);
+      return NextResponse.json(
+        { error: "Resource path not specified" },
+        { status: 404 }
+      );
     }
 
     // Join the path segments to get the internal EPUB file path
@@ -59,6 +61,7 @@ export async function GET(
     const zip = await JSZip.loadAsync(arrayBuffer);
 
     // Get the requested file from the EPUB archive
+    // Try multiple path variations for better compatibility
     let file = zip.file(internalPath);
 
     if (!file) {
@@ -75,9 +78,10 @@ export async function GET(
       // Try with case-insensitive search (some EPUBs have inconsistent casing)
       const allFiles = Object.keys(zip.files);
       const matchingFile = allFiles.find(
-        (f) => f.toLowerCase() === internalPath.toLowerCase() || 
-               f.toLowerCase() === `/${internalPath}`.toLowerCase() ||
-               f.toLowerCase() === internalPath.replace(/^\//, "").toLowerCase()
+        (f) =>
+          f.toLowerCase() === internalPath.toLowerCase() ||
+          f.toLowerCase() === `/${internalPath}`.toLowerCase() ||
+          f.toLowerCase() === internalPath.replace(/^\//, "").toLowerCase()
       );
       if (matchingFile) {
         file = zip.file(matchingFile);
@@ -87,22 +91,28 @@ export async function GET(
     // Handle missing files - some are optional (like Apple-specific metadata)
     if (!file) {
       console.warn(`File not found in EPUB (may be optional): ${internalPath}`);
-      
+
       // Return empty XML response for optional metadata files (like Apple iBooks display options)
       // This prevents 404 errors for files that may not exist in all EPUBs
-      if (internalPath.includes("META-INF") && internalPath.includes("com.apple")) {
-        return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><display_options/>', {
-          status: 200,
-          headers: {
-            "Content-Type": "application/xml",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Cache-Control": "public, max-age=3600",
-          },
-        });
+      if (
+        internalPath.includes("META-INF") &&
+        internalPath.includes("com.apple")
+      ) {
+        return new NextResponse(
+          '<?xml version="1.0" encoding="UTF-8"?><display_options/>',
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/xml",
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "GET, OPTIONS",
+              "Access-Control-Allow-Headers": "Content-Type",
+              "Cache-Control": "public, max-age=3600",
+            },
+          }
+        );
       }
-      
+
       // Return 404 for other missing files
       return NextResponse.json(
         { error: `File not found in EPUB: ${internalPath}` },

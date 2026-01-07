@@ -44,9 +44,20 @@ export function useMoviesWithFilters(
       const response = await fetch(`/api/movie-library?${params.toString()}`);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          // If response is not JSON, use status text
+          errorData = {
+            error: `HTTP ${response.status}`,
+            details: response.statusText || "Unknown error",
+          };
+        }
         console.error("API error:", errorData);
-        throw new Error("Failed to fetch movies");
+        const errorMessage =
+          errorData?.error || errorData?.details || `Failed to fetch movies (${response.status})`;
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

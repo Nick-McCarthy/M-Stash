@@ -80,3 +80,83 @@ export async function POST(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ ebook: string }> }
+) {
+  try {
+    const { ebook } = await params;
+    const { searchParams } = new URL(request.url);
+    const bookmarkId = searchParams.get("bookmarkId");
+
+    // Validate ebook ID parameter
+    const ebookId = z.coerce.number().int().positive().parse(ebook);
+
+    // Validate bookmark ID
+    if (!bookmarkId) {
+      return NextResponse.json(
+        { error: "Bookmark ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const validatedBookmarkId = z.coerce.number().int().positive().parse(bookmarkId);
+
+    // Check if bookmark exists and belongs to this ebook
+    const bookmarkResult = await db
+      .select()
+      .from(ebookBookmarks)
+      .where(eq(ebookBookmarks.bookmarkId, validatedBookmarkId))
+      .limit(1);
+
+    if (bookmarkResult.length === 0) {
+      return NextResponse.json(
+        { error: "Bookmark not found" },
+        { status: 404 }
+      );
+    }
+
+    const bookmark = bookmarkResult[0];
+
+    // Verify the bookmark belongs to this ebook
+    if (bookmark.ebookId !== ebookId) {
+      return NextResponse.json(
+        { error: "Bookmark does not belong to this ebook" },
+        { status: 403 }
+      );
+    }
+
+    // Delete the bookmark
+    await db
+      .delete(ebookBookmarks)
+      .where(eq(ebookBookmarks.bookmarkId, validatedBookmarkId));
+
+    return NextResponse.json(
+      { message: "Bookmark deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting bookmark:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: "Invalid request data",
+          details: error.issues
+            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+            .join(", "),
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        error: "Failed to delete bookmark",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}

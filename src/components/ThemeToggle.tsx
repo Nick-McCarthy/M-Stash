@@ -9,7 +9,7 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Avoid hydration mismatch
+  // Avoid hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -20,10 +20,19 @@ export function ThemeToggle() {
     setTheme(checked ? "dark" : "light");
   };
 
-  // Always render the Switch with checked prop to keep it controlled
-  // Use a default value when not mounted to avoid hydration mismatch
-  const checkedValue = mounted ? isDark : false;
+  // Return placeholder with same dimensions until mounted
+  // This ensures server and client render identical HTML initially
+  if (!mounted) {
+    return (
+      <div className="flex items-center gap-2">
+        <Sun className="h-4 w-4 text-muted-foreground" />
+        <Switch checked={false} disabled />
+        <Moon className="h-4 w-4 text-muted-foreground" />
+      </div>
+    );
+  }
 
+  // After mount, render with actual theme state
   return (
     <div className="flex items-center gap-2">
       <Sun
@@ -32,9 +41,8 @@ export function ThemeToggle() {
         }`}
       />
       <Switch 
-        checked={checkedValue} 
+        checked={isDark} 
         onCheckedChange={handleToggle}
-        disabled={!mounted}
       />
       <Moon
         className={`h-4 w-4 transition-colors ${

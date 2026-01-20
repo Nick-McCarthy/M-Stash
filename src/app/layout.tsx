@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navigation } from "@/components/NavigationBar";
+import { ConditionalNavigation } from "@/components/ConditionalNavigation";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
@@ -37,7 +37,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            <Navigation />
+            <ConditionalNavigation />
             {children}
           </QueryProvider>
         </ThemeProvider>

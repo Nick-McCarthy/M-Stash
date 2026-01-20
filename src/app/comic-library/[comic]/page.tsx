@@ -39,12 +39,12 @@ export default function ComicPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4 sm:py-6 lg:py-8 max-w-7xl">
       {/* Breadcrumb */}
       <ComicHeader comicTitle={comic.comic_title} />
 
       {/* Main Content Layout */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-center items-stretch lg:h-[calc(100vh-160px)]">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-stretch justify-center">
         {/* Comic Details Card */}
         <ComicDetailsCard comic={comic} />
 

@@ -42,12 +42,12 @@ export function ComicDetailsCard({ comic }: ComicDetailsCardProps) {
   };
 
   return (
-    <Card className="w-fit mx-auto lg:mx-0 lg:w-80 lg:flex lg:flex-col">
-      <CardContent className="p-6 lg:flex-1 lg:flex lg:flex-col">
-        <div className="space-y-6 lg:flex-1 lg:flex lg:flex-col">
+    <Card className="w-full lg:w-80 xl:w-96 flex-shrink-0 flex flex-col">
+      <CardContent className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 space-y-4 sm:space-y-6">
           {/* Thumbnail */}
           <div className="flex justify-center flex-shrink-0">
-            <div className="relative w-64 h-96 overflow-hidden rounded-lg">
+            <div className="relative w-full max-w-xs sm:max-w-sm aspect-[2/3] overflow-hidden rounded-lg">
               <Image
                 src={
                   comic.thumbnail_address && !imageError
@@ -63,21 +63,21 @@ export function ComicDetailsCard({ comic }: ComicDetailsCardProps) {
           </div>
 
           {/* Comic Details */}
-          <div className="space-y-4 lg:flex-1">
-            <div>
-              <h1 className="text-3xl font-bold mb-2 text-center">
+          <div className="flex flex-col flex-1 min-h-0 space-y-4">
+            <div className="flex-shrink-0">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-center break-words">
                 {comic.comic_title}
               </h1>
               <div className="flex flex-col sm:flex-row sm:items-center justify-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 justify-center">
                   <BookOpen className="h-4 w-4" />
                   <span>{comic.number_of_chapters}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 justify-center">
                   <Eye className="h-4 w-4" />
                   <span>{formatViews(comic.views)}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 justify-center">
                   <Calendar className="h-4 w-4" />
                   <span>{formatDate(comic.updated_at)}</span>
                 </div>
@@ -85,7 +85,7 @@ export function ComicDetailsCard({ comic }: ComicDetailsCardProps) {
             </div>
 
             {/* Type and Status */}
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-2 justify-center flex-shrink-0">
               <Badge variant="secondary" className="capitalize">
                 {comic.comic_type}
               </Badge>
@@ -94,43 +94,46 @@ export function ComicDetailsCard({ comic }: ComicDetailsCardProps) {
               </Badge>
             </div>
 
-            {/* Description */}
-            {comic.comic_description && (
-              <div>
-                <h3 className="font-semibold mb-2">Description</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {comic.comic_description}
-                </p>
-              </div>
-            )}
-
-            {/* Genres */}
-            {comic.genres && comic.genres.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-2">Genres</h3>
-                <div className="flex flex-wrap gap-2">
-                  {comic.genres.map((genre) => (
-                    <Badge key={genre} variant="outline">
-                      {genre}
-                    </Badge>
-                  ))}
+            {/* Scrollable Content Area */}
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-2 -mr-2">
+              {/* Description */}
+              {comic.comic_description && (
+                <div className="flex-shrink-0">
+                  <h3 className="font-semibold mb-2">Description</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed break-words">
+                    {comic.comic_description}
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Tags */}
-            {comic.tags && comic.tags.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-2">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {comic.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
+              {/* Genres */}
+              {comic.genres && comic.genres.length > 0 && (
+                <div className="flex-shrink-0">
+                  <h3 className="font-semibold mb-2">Genres</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {comic.genres.map((genre) => (
+                      <Badge key={genre} variant="outline" className="text-xs">
+                        {genre}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Tags */}
+              {comic.tags && comic.tags.length > 0 && (
+                <div className="flex-shrink-0">
+                  <h3 className="font-semibold mb-2">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {comic.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

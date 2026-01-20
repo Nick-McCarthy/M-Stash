@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ebooks } from "@/lib/db/schema";
-import { ilike, or, and, sql, asc, desc } from "drizzle-orm";
+import { or, and, sql, asc, desc } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,10 +16,12 @@ export async function GET(request: NextRequest) {
     const conditions = [];
 
     if (search) {
+      // Use SQLite-compatible case-insensitive search with lower()
+      const searchLower = search.toLowerCase();
       conditions.push(
         or(
-          ilike(ebooks.ebookTitle, `%${search}%`),
-          ilike(ebooks.ebookAuthor, `%${search}%`)
+          sql`lower(${ebooks.ebookTitle}) LIKE ${`%${searchLower}%`}`,
+          sql`lower(${ebooks.ebookAuthor}) LIKE ${`%${searchLower}%`}`
         )
       );
     }
@@ -35,12 +37,12 @@ export async function GET(request: NextRequest) {
 
     const totalItems = parseInt(countResult[0]?.count?.toString() || "0");
 
-    // Get ebooks with pagination, ordered by title
+    // Get ebooks with pagination, ordered by author
     const ebooksResult = await db
       .select()
       .from(ebooks)
       .where(whereClause)
-      .orderBy(asc(ebooks.ebookTitle))
+      .orderBy(asc(ebooks.ebookAuthor))
       .limit(itemsPerPage)
       .offset((page - 1) * itemsPerPage);
 

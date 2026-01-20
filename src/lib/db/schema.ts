@@ -8,6 +8,19 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
+// Users Table (for authentication)
+export const users = sqliteTable("users", {
+  userId: integer("user_id").primaryKey({ autoIncrement: true }),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 // Tag Types Table
 export const tagTypes = sqliteTable("tag_types", {
   tagName: text("tag_name").primaryKey(),
@@ -323,3 +336,5 @@ export type TagType = typeof tagTypes.$inferSelect;
 export type NewTagType = typeof tagTypes.$inferInsert;
 export type GenreType = typeof genreTypes.$inferSelect;
 export type NewGenreType = typeof genreTypes.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;

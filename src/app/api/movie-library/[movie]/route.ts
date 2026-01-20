@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { movies } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { movies, videoVersions } from "@/lib/db/schema";
+import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
 import { MovieSchema, MovieApiErrorSchema } from "@/lib/schemas/movies";
 import { ZodError } from "zod";
@@ -30,6 +30,26 @@ export async function GET(
 
     const movieData = movieResult[0];
 
+    // Fetch video versions (resolution variants: 480, 720, 1080, etc.) for debugging
+    const videoVersionsResult = await db
+      .select()
+      .from(videoVersions)
+      .where(eq(videoVersions.movieId, movieId))
+      .orderBy(asc(videoVersions.resolution));
+
+    // Debug: Log the master playlist address and available resolutions
+    console.log("📹 Movie data from DB:", {
+      movieId: movieData.movieId,
+      title: movieData.title,
+      masterPlaylistAddress: movieData.masterPlaylistAddress,
+      availableResolutions: videoVersionsResult.map(v => ({
+        resolution: v.resolution,
+        basePath: v.basePath,
+        playlistPath: v.playlistPath,
+        isDefault: v.isDefault,
+      })),
+    });
+
     // Format the movie data to match the schema
     const formattedMovie = {
       movie_id: movieData.movieId,
@@ -41,6 +61,13 @@ export async function GET(
       views: movieData.views,
       updated_at: movieData.updatedAt,
     };
+
+    // Debug: Log formatted movie
+    console.log("📤 Formatted movie for API:", {
+      video_address: formattedMovie.video_address,
+      video_address_type: typeof formattedMovie.video_address,
+      video_address_length: formattedMovie.video_address?.length,
+    });
 
     // Validate response with Zod schema
     const validationResult = MovieSchema.safeParse(formattedMovie);

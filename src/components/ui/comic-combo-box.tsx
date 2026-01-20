@@ -43,8 +43,24 @@ export function ComicComboBox({
   disabled = false,
 }: ComicComboBoxProps) {
   const [open, setOpen] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
+  const isSelectingRef = React.useRef(false);
 
   const selectedComic = comics.find((comic) => comic.id.toString() === value);
+
+  // Reset search when popover closes (but not if we just selected something)
+  React.useEffect(() => {
+    if (!open && !isSelectingRef.current) {
+      setSearchValue("");
+    }
+    // Reset the flag after a brief delay
+    if (isSelectingRef.current) {
+      const timer = setTimeout(() => {
+        isSelectingRef.current = false;
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -67,21 +83,39 @@ export function ComicComboBox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-        <Command shouldFilter={true}>
+        <Command
+          shouldFilter={true}
+          value={searchValue}
+          onValueChange={setSearchValue}
+        >
           <CommandInput placeholder="Search comics..." />
           <CommandList>
             <CommandEmpty>No comics found.</CommandEmpty>
             <CommandGroup>
               {comics.map((comic) => {
                 const isSelected = value === comic.id.toString();
+                // Create searchable value that includes title, type, and status
+                const searchableValue = `${comic.title} ${comic.type} ${comic.status}`;
+
+                const handleSelect = () => {
+                  // Mark that we're selecting to prevent search reset
+                  isSelectingRef.current = true;
+                  // Auto-complete the search input with the full title
+                  setSearchValue(comic.title);
+                  // Update the selected value
+                  onValueChange(comic.id.toString());
+                  // Small delay to show the auto-completed text before closing
+                  setTimeout(() => {
+                    setOpen(false);
+                  }, 150);
+                };
+
                 return (
                   <CommandItem
                     key={comic.id}
-                    value={`${comic.title} ${comic.type} ${comic.status}`}
-                    onSelect={() => {
-                      onValueChange(comic.id.toString());
-                      setOpen(false);
-                    }}
+                    value={searchableValue}
+                    onSelect={handleSelect}
+                    onClick={handleSelect}
                     keywords={[
                       comic.title,
                       comic.type,
@@ -96,7 +130,7 @@ export function ComicComboBox({
                         isSelected ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex flex-col flex-1">
+                    <div className="flex flex-col flex-1 pointer-events-none">
                       <span className="font-medium">{comic.title}</span>
                       <span className="text-sm text-muted-foreground">
                         {comic.chapters} chapters • {comic.status}

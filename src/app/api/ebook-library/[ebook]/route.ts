@@ -3,6 +3,10 @@ import { db } from "@/lib/db";
 import { ebooks, ebookBookmarks } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
+import {
+  EbookDetailSchema,
+  EbookApiErrorSchema,
+} from "@/lib/schemas/ebooks";
 
 export async function GET(
   request: NextRequest,
@@ -53,28 +57,42 @@ export async function GET(
       bookmarks,
     };
 
-    return NextResponse.json(formattedEbook);
+    // Validate response with Zod schema
+    const validationResult = EbookDetailSchema.safeParse(formattedEbook);
+
+    if (!validationResult.success) {
+      console.error(
+        "Response validation failed:",
+        JSON.stringify(validationResult.error.issues, null, 2)
+      );
+      return NextResponse.json(
+        {
+          error: "Response validation failed",
+          details: validationResult.error.issues,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(validationResult.data);
   } catch (error) {
     console.error("Error fetching ebook:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid ebook ID",
-          details: error.issues
-            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-            .join(", "),
-        },
-        { status: 400 }
-      );
+      const errorResponse = EbookApiErrorSchema.parse({
+        error: "Invalid ebook ID",
+        details: error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join(", "),
+      });
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch ebook",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    const errorResponse = EbookApiErrorSchema.parse({
+      error: "Failed to fetch ebook",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

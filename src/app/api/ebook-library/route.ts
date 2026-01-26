@@ -2,15 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ebooks } from "@/lib/db/schema";
 import { or, and, sql, asc, desc } from "drizzle-orm";
+import {
+  EbooksQueryParamsSchema,
+  EbooksResponseSchema,
+  EbookApiErrorSchema,
+} from "@/lib/schemas/ebooks";
+import { ZodError } from "zod";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // Parse query parameters
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    // Parse and validate query parameters
+    let queryParams;
+    try {
+      queryParams = EbooksQueryParamsSchema.parse({
+        page: searchParams.get("page"),
+        search: searchParams.get("search"),
+      });
+    } catch (parseError) {
+      console.error("Query parameter validation error:", parseError);
+      throw parseError;
+    }
+
+    const { page, search } = queryParams;
     const itemsPerPage = 15;
-    const search = searchParams.get("search") || "";
 
     // Build conditions array
     const conditions = [];
@@ -64,16 +80,42 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    return NextResponse.json(responseData);
+    // Validate response with Zod schema
+    const validationResult = EbooksResponseSchema.safeParse(responseData);
+
+    if (!validationResult.success) {
+      console.error(
+        "Response validation failed:",
+        JSON.stringify(validationResult.error.issues, null, 2)
+      );
+      return NextResponse.json(
+        {
+          error: "Response validation failed",
+          details: validationResult.error.issues,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(validationResult.data);
   } catch (error) {
     console.error("Error fetching ebooks:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch ebooks",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    if (error instanceof ZodError) {
+      const errorResponse = EbookApiErrorSchema.parse({
+        error: "Invalid query parameters",
+        details: error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join(", "),
+      });
+      return NextResponse.json(errorResponse, { status: 400 });
+    }
+
+    const errorResponse = EbookApiErrorSchema.parse({
+      error: "Failed to fetch ebooks",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

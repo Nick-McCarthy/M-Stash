@@ -1,35 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { z } from "zod";
-
-// TV Shows Response Schema
-const TvShowsResponseSchema = z.object({
-  tv_shows: z.array(
-    z.object({
-      tv_show_id: z.number(),
-      title: z.string(),
-      thumbnail_address: z.string(),
-      description: z.string().nullable(),
-      tags: z.array(z.string()),
-      views: z.number(),
-      updated_at: z.union([z.string(), z.date()]),
-    })
-  ),
-  pagination: z.object({
-    currentPage: z.number(),
-    totalPages: z.number(),
-    totalItems: z.number(),
-    itemsPerPage: z.number(),
-  }),
-  tags: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string(),
-      count: z.number(),
-    })
-  ),
-});
-
-export type TvShowsResponse = z.infer<typeof TvShowsResponseSchema>;
+import {
+  TvShowsResponseSchema,
+  TvShowDetailSchema,
+  type TvShowsResponse,
+  type TvShowDetail,
+} from "@/lib/schemas/tv-shows";
 
 // Query keys for consistent caching
 export const tvShowKeys = {
@@ -102,6 +77,42 @@ export function useTvShowsWithFilters(
 
       return validationResult.data;
     },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useTvShow(id: number) {
+  return useQuery({
+    queryKey: tvShowKeys.detail(id),
+    queryFn: async (): Promise<TvShowDetail | null> => {
+      const response = await fetch(`/api/tv-library/${id}`);
+
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        const errorData = await response.json();
+        console.error("TV show detail API error:", errorData);
+        throw new Error("Failed to fetch TV show");
+      }
+
+      const data = await response.json();
+
+      // Validate response with Zod schema
+      const validationResult = TvShowDetailSchema.safeParse(data);
+
+      if (!validationResult.success) {
+        console.error(
+          "TV show detail validation failed:",
+          validationResult.error.issues
+        );
+        console.error("Received data:", data);
+        throw new Error(
+          `Validation failed: ${validationResult.error.issues[0]?.message}`
+        );
+      }
+
+      return validationResult.data;
+    },
+    enabled: !!id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

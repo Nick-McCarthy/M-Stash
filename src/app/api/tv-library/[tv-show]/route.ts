@@ -4,6 +4,10 @@ import { tvShows, tvEpisodes } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
 import { parseJsonArray } from "@/lib/db/sqlite-helpers";
+import {
+  TvShowDetailSchema,
+  TvShowApiErrorSchema,
+} from "@/lib/schemas/tv-shows";
 
 export async function GET(
   request: NextRequest,
@@ -70,29 +74,43 @@ export async function GET(
       seasons: formattedSeasons,
     };
 
-    return NextResponse.json(formattedTvShow);
+    // Validate response with Zod schema
+    const validationResult = TvShowDetailSchema.safeParse(formattedTvShow);
+
+    if (!validationResult.success) {
+      console.error(
+        "Response validation failed:",
+        JSON.stringify(validationResult.error.issues, null, 2)
+      );
+      return NextResponse.json(
+        {
+          error: "Response validation failed",
+          details: validationResult.error.issues,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(validationResult.data);
   } catch (error) {
     console.error("Error fetching TV show:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid TV show ID",
-          details: error.issues
-            .map((e: any) => `${e.path.join(".")}: ${e.message}`)
-            .join(", "),
-        },
-        { status: 400 }
-      );
+      const errorResponse = TvShowApiErrorSchema.parse({
+        error: "Invalid TV show ID",
+        details: error.issues
+          .map((e: any) => `${e.path.join(".")}: ${e.message}`)
+          .join(", "),
+      });
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch TV show",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    const errorResponse = TvShowApiErrorSchema.parse({
+      error: "Failed to fetch TV show",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 

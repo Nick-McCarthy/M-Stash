@@ -4,19 +4,11 @@ import { tvShows } from "@/lib/db/schema";
 import { eq, ilike, and, desc, asc, sql } from "drizzle-orm";
 import { jsonArrayContains, parseJsonArray } from "@/lib/db/sqlite-helpers";
 import { ZodError } from "zod";
-import { z } from "zod";
-
-// Simple query params schema for TV shows
-const TvShowsQueryParamsSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  itemsPerPage: z.coerce.number().int().positive().max(100).default(25),
-  tag: z.string().nullish(),
-  search: z.string().nullish(),
-  sort: z.preprocess(
-    (val) => (val === null || val === undefined ? "az-asc" : val),
-    z.enum(["az-asc", "za-desc", "date-updated", "views"])
-  ),
-});
+import {
+  TvShowsQueryParamsSchema,
+  TvShowsResponseSchema,
+  TvShowApiErrorSchema,
+} from "@/lib/schemas/tv-shows";
 
 export async function GET(request: NextRequest) {
   try {
@@ -150,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-    return NextResponse.json({
+    const responseData = {
       tv_shows: tvShowsWithFormattedData,
       pagination: {
         currentPage: page,
@@ -159,29 +151,45 @@ export async function GET(request: NextRequest) {
         itemsPerPage,
       },
       tags,
-    });
+    };
+
+    // Validate response with Zod schema
+    const validationResult = TvShowsResponseSchema.safeParse(responseData);
+
+    if (!validationResult.success) {
+      console.error(
+        "Response validation failed:",
+        JSON.stringify(validationResult.error.issues, null, 2)
+      );
+      return NextResponse.json(
+        {
+          error: "Response validation failed",
+          details: validationResult.error.issues,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(validationResult.data);
   } catch (error) {
     console.error("Error in TV library route:", error);
 
     if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid query parameters",
-          details: error.issues
-            .map((e: any) => `${e.path.join(".")}: ${e.message}`)
-            .join(", "),
-        },
-        { status: 400 }
-      );
+      const errorResponse = TvShowApiErrorSchema.parse({
+        error: "Invalid query parameters",
+        details: error.issues
+          .map((e: any) => `${e.path.join(".")}: ${e.message}`)
+          .join(", "),
+      });
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch TV shows",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    const errorResponse = TvShowApiErrorSchema.parse({
+      error: "Failed to fetch TV shows",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 

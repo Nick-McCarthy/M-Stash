@@ -3,18 +3,11 @@ import { db } from "@/lib/db";
 import { ebookBookmarks } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-
-// Schema for creating a bookmark
-const CreateBookmarkSchema = z.object({
-  bookmark_name: z.string().min(1, "Bookmark name is required").max(200),
-  chapter_title: z.string().optional(),
-  cfi: z.string().min(1, "CFI (location) is required"), // CFI string - the recommended way to store EPUB locations
-  position_percentage: z
-    .number()
-    .min(0, "Position percentage must be between 0 and 100")
-    .max(100, "Position percentage must be between 0 and 100")
-    .optional(), // Optional: kept for display purposes
-});
+import {
+  CreateBookmarkSchema,
+  CreateBookmarkResponseSchema,
+  EbookApiErrorSchema,
+} from "@/lib/schemas/ebooks";
 
 export async function POST(
   request: NextRequest,
@@ -44,40 +37,67 @@ export async function POST(
 
     const bookmark = newBookmark[0];
 
-    return NextResponse.json(
-      {
-        bookmark_id: bookmark.bookmarkId,
-        bookmark_name: bookmark.bookmarkName,
-        chapter_title: bookmark.chapterTitle,
-        cfi: bookmark.cfi,
-        position_percentage: bookmark.positionPercentage,
-        created_at: bookmark.createdAt,
-        updated_at: bookmark.updatedAt,
-      },
-      { status: 201 }
-    );
+    const responseData = {
+      bookmark_id: bookmark.bookmarkId,
+      bookmark_name: bookmark.bookmarkName,
+      chapter_title: bookmark.chapterTitle,
+      cfi: bookmark.cfi,
+      position_percentage: bookmark.positionPercentage,
+      created_at: bookmark.createdAt,
+      updated_at: bookmark.updatedAt,
+    };
+
+    // Validate response with Zod schema
+    const validationResult = CreateBookmarkResponseSchema.safeParse({
+      bookmark_id: responseData.bookmark_id,
+      bookmark_name: responseData.bookmark_name,
+      chapter_title: responseData.chapter_title,
+      cfi: responseData.cfi,
+      position_percentage: responseData.position_percentage,
+      created_at:
+        responseData.created_at instanceof Date
+          ? responseData.created_at.toISOString()
+          : responseData.created_at,
+      updated_at:
+        responseData.updated_at instanceof Date
+          ? responseData.updated_at.toISOString()
+          : responseData.updated_at,
+    });
+
+    if (!validationResult.success) {
+      console.error(
+        "Response validation failed:",
+        JSON.stringify(validationResult.error.issues, null, 2)
+      );
+      return NextResponse.json(
+        {
+          error: "Response validation failed",
+          details: validationResult.error.issues,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(responseData, { status: 201 });
   } catch (error) {
     console.error("Error creating bookmark:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid request data",
-          details: error.issues
-            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-            .join(", "),
-        },
-        { status: 400 }
-      );
+      const errorResponse = EbookApiErrorSchema.parse({
+        error: "Invalid request data",
+        details: error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join(", "),
+      });
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
-    return NextResponse.json(
-      {
-        error: "Failed to create bookmark",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    const errorResponse = EbookApiErrorSchema.parse({
+      error: "Failed to create bookmark",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
@@ -140,23 +160,20 @@ export async function DELETE(
     console.error("Error deleting bookmark:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid request data",
-          details: error.issues
-            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-            .join(", "),
-        },
-        { status: 400 }
-      );
+      const errorResponse = EbookApiErrorSchema.parse({
+        error: "Invalid request data",
+        details: error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join(", "),
+      });
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
-    return NextResponse.json(
-      {
-        error: "Failed to delete bookmark",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    const errorResponse = EbookApiErrorSchema.parse({
+      error: "Failed to delete bookmark",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

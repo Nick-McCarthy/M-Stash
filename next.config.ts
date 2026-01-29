@@ -8,6 +8,11 @@ const awsRegion = process.env.S3_REGION || "us-east-1";
 const s3Hostname = `${bucketName}.s3.${awsRegion}.amazonaws.com`;
 
 const nextConfig: NextConfig = {
+  eslint: {
+    // Amplify runs `next build` in CI; we don't want ESLint (style rules like no-explicit-any)
+    // to fail the production build. Keep linting for local/dev via `npm run lint`.
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {

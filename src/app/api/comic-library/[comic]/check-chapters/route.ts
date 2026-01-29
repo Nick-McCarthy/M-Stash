@@ -5,10 +5,11 @@ import { eq, inArray, and } from "drizzle-orm";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { comic: string } }
+  { params }: { params: Promise<{ comic: string }> }
 ) {
   try {
-    const comicId = parseInt(params.comic);
+    const { comic } = await params;
+    const comicId = parseInt(comic);
     const { chapterNumbers } = await request.json();
 
     if (!chapterNumbers || !Array.isArray(chapterNumbers)) {

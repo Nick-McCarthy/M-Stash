@@ -200,8 +200,10 @@ function serveFile(fileBuffer: Buffer, internalPath: string) {
     contentType = contentTypes[ext];
   }
 
-  // Return the file with appropriate headers
-  return new NextResponse(fileBuffer, {
+  // Return the file with appropriate headers.
+  // Convert Buffer to a standalone ArrayBuffer for NextResponse typing compatibility.
+  const body = Uint8Array.from(fileBuffer).buffer;
+  return new NextResponse(body, {
     status: 200,
     headers: {
       "Content-Type": contentType,

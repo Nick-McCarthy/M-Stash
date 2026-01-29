@@ -13,7 +13,7 @@ const s3Client = new S3Client({
   },
 });
 
-const BUCKET_NAME = process.env.S3_S3_BUCKET_NAME!;
+const BUCKET_NAME = process.env.S3_BUCKET_NAME!;
 
 // Schema for creating a movie
 const CreateMovieDataSchema = z.object({

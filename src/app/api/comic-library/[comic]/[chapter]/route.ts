@@ -48,7 +48,7 @@ export async function GET(
       .where(
         and(
           eq(comicChapters.comicId, comicId),
-          eq(comicChapters.chapterNumber, chapterNumber.toString())
+          eq(comicChapters.chapterNumber, chapterNumber)
         )
       )
       .orderBy(asc(chapterImages.imageOrdering));
@@ -64,7 +64,7 @@ export async function GET(
       .where(
         and(
           eq(comicChapters.comicId, comicId),
-          eq(comicChapters.chapterNumber, chapterNumber.toString())
+          eq(comicChapters.chapterNumber, chapterNumber)
         )
       )
       .limit(1);

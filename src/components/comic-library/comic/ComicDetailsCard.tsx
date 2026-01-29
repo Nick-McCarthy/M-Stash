@@ -13,7 +13,7 @@ interface ComicDetailsCardProps {
     updated_at: string;
     comic_type: string;
     status: string;
-    comic_description?: string;
+    comic_description?: string | null;
     genres?: string[];
     tags?: string[];
   };

@@ -49,7 +49,7 @@ export default function ComicPage() {
         <ComicDetailsCard comic={comic} />
 
         {/* Chapters List */}
-        <ChaptersListCard comicId={comic.comic_id} chapters={comic.chapters} />
+        <ChaptersListCard comicId={comic.comic_id} chapters={comic.chapters ?? []} />
       </div>
     </div>
   );

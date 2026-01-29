@@ -26,6 +26,12 @@ yarn-error.log*
 .env*.local
 .env
 
+# SQLite / local database artifacts
+database/
+*.db-wal
+*.db-shm
+*.db-journal
+
 # Vercel
 .vercel
 

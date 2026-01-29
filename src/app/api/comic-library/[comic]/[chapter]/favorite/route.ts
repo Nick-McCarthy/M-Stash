@@ -32,7 +32,7 @@ export async function PUT(
       .where(
         and(
           eq(comicChapters.comicId, comicId),
-          eq(comicChapters.chapterNumber, chapterNumber.toString())
+          eq(comicChapters.chapterNumber, chapterNumber)
         )
       )
       .returning({

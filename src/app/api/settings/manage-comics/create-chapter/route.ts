@@ -16,7 +16,7 @@ const s3Client = new S3Client({
   },
 });
 
-const BUCKET_NAME = process.env.S3_S3_BUCKET_NAME!;
+const BUCKET_NAME = process.env.S3_BUCKET_NAME!;
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,6 +41,26 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const comicIdNum = Number.parseInt(comicId, 10);
+    const chapterNumberNum = Number.parseFloat(chapterNumber);
+    const imageOrderNum = Number.parseInt(imageOrder, 10);
+
+    if (!Number.isFinite(comicIdNum) || comicIdNum <= 0) {
+      return NextResponse.json({ error: "Invalid comicId" }, { status: 400 });
+    }
+    if (!Number.isFinite(chapterNumberNum) || chapterNumberNum <= 0) {
+      return NextResponse.json(
+        { error: "Invalid chapterNumber" },
+        { status: 400 }
+      );
+    }
+    if (!Number.isFinite(imageOrderNum) || imageOrderNum <= 0) {
+      return NextResponse.json(
+        { error: "Invalid imageOrder" },
         { status: 400 }
       );
     }
@@ -102,8 +122,8 @@ export async function POST(request: NextRequest) {
       .from(comicChapters)
       .where(
         and(
-          eq(comicChapters.comicId, parseInt(comicId)),
-          eq(comicChapters.chapterNumber, chapterNumber)
+          eq(comicChapters.comicId, comicIdNum),
+          eq(comicChapters.chapterNumber, chapterNumberNum)
         )
       )
       .limit(1);
@@ -116,8 +136,8 @@ export async function POST(request: NextRequest) {
       const newChapter = await db
         .insert(comicChapters)
         .values({
-          comicId: parseInt(comicId),
-          chapterNumber: chapterNumber,
+          comicId: comicIdNum,
+          chapterNumber: chapterNumberNum,
         })
         .returning({ chapterId: comicChapters.chapterId });
       chapterId = newChapter[0].chapterId;
@@ -145,16 +165,16 @@ export async function POST(request: NextRequest) {
     // Create image record in database
     await db.insert(chapterImages).values({
       chapterId: chapterId,
-      imageOrdering: parseInt(imageOrder),
+      imageOrdering: imageOrderNum,
       imagePath: publicUrl,
     });
 
     return NextResponse.json({
       url: publicUrl,
       key: s3Key,
-      chapterNumber,
-      imageOrder,
-      comicId,
+      chapterNumber: chapterNumberNum,
+      imageOrder: imageOrderNum,
+      comicId: comicIdNum,
     });
   } catch (error) {
     console.error("Chapter upload error:", error);

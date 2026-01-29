@@ -10,8 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ ebook: string; path?: string[] }> }
 ) {
   try {
-    const resolvedParams = await params;
-    const { ebook, path } = resolvedParams;
+    const { ebook, path } = await params;
 
     // Validate ebook ID parameter
     const ebookId = z.coerce.number().int().positive().parse(ebook);
@@ -145,11 +144,13 @@ export async function GET(
       contentType = contentTypes[ext];
     }
 
-    // Get the file content as a buffer
-    const fileBuffer = await file.async("nodebuffer");
+    // Get the file content as bytes
+    const fileBytes = await file.async("uint8array");
+    // Convert to a standalone ArrayBuffer (avoid ArrayBuffer | SharedArrayBuffer typing issues)
+    const fileArrayBuffer = Uint8Array.from(fileBytes).buffer;
 
     // Return the file with appropriate headers
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(fileArrayBuffer, {
       status: 200,
       headers: {
         "Content-Type": contentType,

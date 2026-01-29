@@ -14,8 +14,7 @@
     "db:seed:tags-genres": "tsx scripts/seed-tags-genres.ts",
     "db:seed:all": "tsx scripts/seed-all.ts",
     "db:export": "tsx scripts/export-db-data.ts",
-    "db:remove:tags": "tsx scripts/remove-tags.ts",
-    "postbuild": "npm run db:push && npm run db:seed:all"
+    "db:remove:tags": "tsx scripts/remove-tags.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.697.0",

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ConditionalNavigation } from "@/components/ConditionalNavigation";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { SeedInitializer } from "@/components/SeedInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
+            <SeedInitializer />
             <ConditionalNavigation />
             {children}
           </QueryProvider>

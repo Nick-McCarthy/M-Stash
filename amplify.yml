@@ -8,8 +8,6 @@ frontend:
         - mkdir -p database
         - echo "Running database migrations..."
         - npm run db:push
-        - echo "Seeding database with demo data..."
-        - npm run db:seed:all
     build:
       commands:
         - npm run build

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db } from "../src/lib/db";
 import {
   tagTypes,
   genreTypes,
@@ -11,7 +11,7 @@ import {
   ebooks,
   ebookBookmarks,
   users,
-} from "@/lib/db/schema";
+} from "../src/lib/db/schema";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";

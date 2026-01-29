@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db } from "../src/lib/db";
 import {
   tagTypes,
   genreTypes,
@@ -11,9 +11,9 @@ import {
   ebooks,
   ebookBookmarks,
   users,
-} from "@/lib/db/schema";
+} from "../src/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { parseJsonArray } from "@/lib/db/sqlite-helpers";
+import { parseJsonArray } from "../src/lib/db/sqlite-helpers";
 import fs from "fs";
 import path from "path";
 

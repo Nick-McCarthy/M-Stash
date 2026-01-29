@@ -1,5 +1,5 @@
-import { db } from "@/lib/db";
-import { tagTypes } from "@/lib/db/schema";
+import { db } from "../src/lib/db";
+import { tagTypes } from "../src/lib/db/schema";
 import { sql } from "drizzle-orm";
 
 async function removeTags() {

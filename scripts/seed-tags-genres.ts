@@ -1,5 +1,5 @@
-import { db } from "@/lib/db";
-import { tagTypes, genreTypes } from "@/lib/db/schema";
+import { db } from "../src/lib/db";
+import { tagTypes, genreTypes } from "../src/lib/db/schema";
 
 // 10 detailed tags for media library
 const tags = [

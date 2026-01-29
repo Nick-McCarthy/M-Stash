@@ -6,21 +6,21 @@ import { stringifyJsonArray } from "@/lib/db/sqlite-helpers";
 import { z } from "zod";
 
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
+  region: process.env.S3_REGION || "us-east-1",
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.S3_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
   },
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME!;
+const BUCKET_NAME = process.env.S3_S3_BUCKET_NAME!;
 
 export async function POST(request: NextRequest) {
   try {
     if (
       !BUCKET_NAME ||
-      !process.env.AWS_ACCESS_KEY_ID ||
-      !process.env.AWS_SECRET_ACCESS_KEY
+      !process.env.S3_ACCESS_KEY_ID ||
+      !process.env.S3_SECRET_ACCESS_KEY
     ) {
       return NextResponse.json(
         {
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
       await s3Client.send(command);
       finalThumbnailAddress = `https://${BUCKET_NAME}.s3.${
-        process.env.AWS_REGION || "us-east-1"
+        process.env.S3_REGION || "us-east-1"
       }.amazonaws.com/${s3Key}`;
     }
 

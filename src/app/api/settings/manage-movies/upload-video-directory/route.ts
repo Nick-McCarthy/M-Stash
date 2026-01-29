@@ -18,24 +18,24 @@ try {
 }
 
 // Validate required environment variables
-const AWS_REGION = process.env.AWS_REGION || "us-east-1";
-const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
-const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || configBucketName;
+const S3_REGION = process.env.S3_REGION || "us-east-1";
+const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID;
+const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY;
+const BUCKET_NAME = process.env.S3_BUCKET_NAME || configBucketName;
 
-if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
-  console.error("Missing AWS credentials. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.");
+if (!S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) {
+  console.error("Missing AWS credentials. Please set S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY environment variables.");
 }
 
 if (!BUCKET_NAME) {
-  console.error("Missing AWS S3 bucket name. Please set AWS_S3_BUCKET_NAME environment variable.");
+  console.error("Missing AWS S3 bucket name. Please set S3_BUCKET_NAME environment variable.");
 }
 
 const s3Client = new S3Client({
-  region: AWS_REGION,
+  region: S3_REGION,
   credentials: {
-    accessKeyId: AWS_ACCESS_KEY_ID!,
-    secretAccessKey: AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: S3_ACCESS_KEY_ID!,
+    secretAccessKey: S3_SECRET_ACCESS_KEY!,
   },
 });
 
@@ -102,17 +102,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Server configuration error",
-          details: "AWS_S3_BUCKET_NAME environment variable is not set. Please configure the S3 bucket name.",
+          details: "S3_BUCKET_NAME environment variable is not set. Please configure the S3 bucket name.",
         },
         { status: 500 }
       );
     }
 
-    if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
+    if (!S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) {
       return NextResponse.json(
         {
           error: "Server configuration error",
-          details: "AWS credentials are not configured. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.",
+          details: "AWS credentials are not configured. Please set S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY environment variables.",
         },
         { status: 500 }
       );
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
     );
 
     masterPlaylistAddress = `https://${BUCKET_NAME}.s3.${
-      process.env.AWS_REGION || "us-east-1"
+      process.env.S3_REGION || "us-east-1"
     }.amazonaws.com/${masterPlaylistS3Key}`;
 
     // Upload thumbnail if found (placed at root level next to master.m3u8)
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
       );
 
       thumbnailAddress = `https://${BUCKET_NAME}.s3.${
-        process.env.AWS_REGION || "us-east-1"
+        process.env.S3_REGION || "us-east-1"
       }.amazonaws.com/${thumbnailS3Key}`;
     } else {
       // Use a placeholder or default thumbnail
@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
       );
 
       spriteAddress = `https://${BUCKET_NAME}.s3.${
-        process.env.AWS_REGION || "us-east-1"
+        process.env.S3_REGION || "us-east-1"
       }.amazonaws.com/${spriteS3Key}`;
     } else {
       // Use a placeholder or default sprite
@@ -373,7 +373,7 @@ export async function POST(request: NextRequest) {
           
           const playlistS3Key = `${basePath}/${playlistRelativePath}`;
           const playlistS3Url = `https://${BUCKET_NAME}.s3.${
-            process.env.AWS_REGION || "us-east-1"
+            process.env.S3_REGION || "us-east-1"
           }.amazonaws.com/${playlistS3Key}`;
 
           // Determine base path (directory containing the playlist)
@@ -448,8 +448,8 @@ export async function POST(request: NextRequest) {
           {
             error: "AWS Authentication Error",
             details: "The AWS credentials are incorrect or expired. Please check:\n" +
-              "1. AWS_ACCESS_KEY_ID is correct\n" +
-              "2. AWS_SECRET_ACCESS_KEY matches the access key\n" +
+              "1. S3_ACCESS_KEY_ID is correct\n" +
+              "2. S3_SECRET_ACCESS_KEY matches the access key\n" +
               "3. Credentials have not expired\n" +
               "4. Credentials have permission to upload to the S3 bucket",
           },

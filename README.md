@@ -44,8 +44,8 @@ If you are using an access key and not IAM roles then the ENV variables listed b
 
 //------------------------environment variables-------------------------(env vars)
 NEXTAUTH_SECRET=
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_S3_BUCKET_NAME=
-AWS_REGION=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_BUCKET_NAME=
+S3_REGION=
 DB_SSL= False

@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 // Get S3 bucket configuration from environment variables
-const bucketName = process.env.AWS_S3_BUCKET_NAME || "media-library-hosting";
-const awsRegion = process.env.AWS_REGION || "us-east-1";
+const bucketName = process.env.S3_BUCKET_NAME || "media-library-hosting";
+const awsRegion = process.env.S3_REGION || "us-east-1";
 
 // Construct S3 hostname: {bucket}.s3.{region}.amazonaws.com
 const s3Hostname = `${bucketName}.s3.${awsRegion}.amazonaws.com`;

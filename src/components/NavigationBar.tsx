@@ -23,7 +23,7 @@ export function Navigation() {
     return (
       <nav className="flex items-center justify-between p-4 border-b bg-background">
         <Link href="/" className="text-xl font-bold">
-          MediaApp
+          M-Stash
         </Link>
 
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -68,7 +68,7 @@ export function Navigation() {
   return (
     <nav className="flex items-center justify-between p-4 border-b bg-background">
       <Link href="/" className="text-xl font-bold">
-        MediaApp
+        M-Stash
       </Link>
 
       <div className="flex items-center gap-6">

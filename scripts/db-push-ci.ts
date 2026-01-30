@@ -15,7 +15,7 @@ try {
   // Vercel uses Linux, so we use Unix-style piping
   execSync('echo "y" | npx drizzle-kit push', {
     stdio: "inherit",
-    shell: true,
+    shell: "/bin/sh",
     env: {
       ...process.env,
       CI: "true",

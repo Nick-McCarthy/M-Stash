@@ -20,6 +20,7 @@ export function useMoviesWithFilters(
   itemsPerPage: number = 25,
   filters?: {
     tag?: string;
+    genre?: string;
     search?: string;
     sort?: string;
   }
@@ -38,6 +39,7 @@ export function useMoviesWithFilters(
       if (filters?.search && filters.search !== "")
         params.append("search", filters.search);
       if (filters?.tag && filters.tag !== "") params.append("tag", filters.tag);
+      if (filters?.genre && filters.genre !== "") params.append("genre", filters.genre);
       if (filters?.sort && filters.sort !== "")
         params.append("sort", filters.sort);
 

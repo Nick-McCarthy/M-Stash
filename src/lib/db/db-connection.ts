@@ -29,6 +29,9 @@ try {
   throw err;
 }
 
+// Export sqlite instance for schema initialization
+export { sqlite };
+
 // Create Drizzle instance
 export const db = drizzle(sqlite, { schema });
 

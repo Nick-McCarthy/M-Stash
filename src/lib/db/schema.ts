@@ -130,6 +130,7 @@ export const tvShows = sqliteTable(
     thumbnailAddress: text("thumbnail_address").notNull(),
     description: text("description"),
     tags: text("tags").default("[]").notNull(), // JSON array stored as TEXT
+    genres: text("genres").default("[]").notNull(), // JSON array stored as TEXT
     updatedAt: integer("updated_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),

@@ -4,6 +4,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { ensureSchema } from "@/lib/db/ensure-schema";
 
 const SetupSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -12,6 +13,9 @@ const SetupSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Ensure database schema is initialized before proceeding
+    await ensureSchema();
+    
     const body = await request.json();
     const { username, password } = SetupSchema.parse(body);
 

@@ -45,6 +45,7 @@ export const TvShowSchema = z.object({
   thumbnail_address: z.string().min(1, "Thumbnail address is required"),
   description: z.string().nullable(),
   tags: z.array(z.string()).default([]), // Array of strings
+  genres: z.array(z.string()).default([]), // Array of strings
   views: z.number().int().nonnegative(),
   updated_at: z
     .union([z.string(), z.date()])
@@ -77,6 +78,7 @@ export const TvShowsQueryParamsSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   itemsPerPage: z.coerce.number().int().positive().max(100).default(25),
   tag: z.string().nullish(), // Filter by tag
+  genre: z.string().nullish(), // Filter by genre
   search: z.string().nullish(), // Search in title
   sort: z.preprocess(
     (val) => (val === null || val === undefined ? "az-asc" : val),

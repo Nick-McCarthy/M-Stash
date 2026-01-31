@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { FilterX } from "lucide-react";
 import { useComicsWithFilters } from "@/lib/queries/comics";
+import { useTags } from "@/lib/queries/tags";
 
 export default function ComicLibrary() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,6 +52,9 @@ export default function ComicLibrary() {
     isLoading,
     error,
   } = useComicsWithFilters(currentPage, itemsPerPage, filters);
+
+  // Fetch all available tags from the tags API
+  const { data: availableTags = [], isLoading: isLoadingTags } = useTags();
 
   const handleFiltersChange = (newFilters: FilterOptions) => {
     setFilterOptions(newFilters);
@@ -115,8 +119,8 @@ export default function ComicLibrary() {
             <FilterDrawer
               filters={filterOptions}
               onFiltersChange={handleFiltersChange}
-              availableTags={comicsData?.tags.map((t) => t.label) || []}
-              isLoadingTags={isLoading}
+              availableTags={availableTags}
+              isLoadingTags={isLoadingTags}
             />
             {hasActiveFilters && (
               <Tooltip>

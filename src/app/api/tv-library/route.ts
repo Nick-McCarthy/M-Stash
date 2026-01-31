@@ -9,9 +9,12 @@ import {
   TvShowsResponseSchema,
   TvShowApiErrorSchema,
 } from "@/lib/schemas/tv-shows";
+import { ensureSchema } from "@/lib/db/ensure-schema";
 
 export async function GET(request: NextRequest) {
   try {
+    // Ensure database schema is initialized before proceeding
+    await ensureSchema();
     const { searchParams } = new URL(request.url);
 
     // Parse and validate query parameters
@@ -21,6 +24,7 @@ export async function GET(request: NextRequest) {
         page: searchParams.get("page"),
         itemsPerPage: searchParams.get("itemsPerPage"),
         tag: searchParams.get("tag"),
+        genre: searchParams.get("genre"),
         search: searchParams.get("search"),
         sort: searchParams.get("sort"),
       });
@@ -29,7 +33,7 @@ export async function GET(request: NextRequest) {
       throw parseError;
     }
 
-    const { page, itemsPerPage, tag, search, sort } = queryParams;
+    const { page, itemsPerPage, tag, genre, search, sort } = queryParams;
 
     // Build conditions array
     const conditions = [];
@@ -40,6 +44,10 @@ export async function GET(request: NextRequest) {
 
     if (tag !== null && tag !== undefined) {
       conditions.push(jsonArrayContains(tvShows.tags, tag));
+    }
+
+    if (genre !== null && genre !== undefined) {
+      conditions.push(jsonArrayContains(tvShows.genres, genre));
     }
 
     // Build the where clause
@@ -90,19 +98,45 @@ export async function GET(request: NextRequest) {
         .offset((page - 1) * itemsPerPage);
     } catch (queryError) {
       console.error("Error fetching TV shows:", queryError);
-      throw new Error(`Failed to fetch TV shows: ${queryError instanceof Error ? queryError.message : "Unknown error"}`);
+      // If the error is about missing column, try to add it and retry
+      if (queryError instanceof Error && queryError.message.includes("no such column: genres")) {
+        // Column doesn't exist, add it
+        const { sqlite } = await import("@/lib/db/db-connection");
+        try {
+          sqlite.exec(`ALTER TABLE tv_shows ADD COLUMN genres TEXT NOT NULL DEFAULT '[]'`);
+          console.log("  ✓ Added genres column to tv_shows table");
+          // Retry the query
+          tvShowsResult = await db
+            .select()
+            .from(tvShows)
+            .where(whereClause)
+            .orderBy(orderBy)
+            .limit(itemsPerPage)
+            .offset((page - 1) * itemsPerPage);
+        } catch (retryError) {
+          console.error("Error retrying after adding column:", retryError);
+          throw new Error(`Failed to fetch TV shows: ${queryError.message}`);
+        }
+      } else {
+        throw new Error(`Failed to fetch TV shows: ${queryError instanceof Error ? queryError.message : "Unknown error"}`);
+      }
     }
 
     // Transform field names to match expected format
-    const tvShowsWithFormattedData = tvShowsResult.map((show) => ({
-      tv_show_id: show.tvShowId,
-      title: show.title,
-      thumbnail_address: show.thumbnailAddress,
-      description: show.description,
-      tags: parseJsonArray(show.tags as string),
-      views: show.views,
-      updated_at: show.updatedAt,
-    }));
+    const tvShowsWithFormattedData = tvShowsResult.map((show) => {
+      // Handle case where genres column might not exist in older databases
+      const genresValue = (show as any).genres;
+      return {
+        tv_show_id: show.tvShowId,
+        title: show.title,
+        thumbnail_address: show.thumbnailAddress,
+        description: show.description,
+        tags: parseJsonArray(show.tags as string),
+        genres: parseJsonArray(genresValue || "[]"),
+        views: show.views,
+        updated_at: show.updatedAt,
+      };
+    });
 
     // Get all unique tags with counts
     let allShowsForTags: Array<{ tags: string }> = [];

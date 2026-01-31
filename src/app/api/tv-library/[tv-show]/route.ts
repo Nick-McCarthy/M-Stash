@@ -63,12 +63,15 @@ export async function GET(
     }));
 
     // Format the TV show data
+    // Handle case where genres column might not exist in older databases
+    const genresValue = (tvShowData as any).genres;
     const formattedTvShow = {
       tv_show_id: tvShowData.tvShowId,
       title: tvShowData.title,
       thumbnail_address: tvShowData.thumbnailAddress,
       description: tvShowData.description,
       tags: parseJsonArray(tvShowData.tags as string),
+      genres: parseJsonArray(genresValue || "[]"),
       views: tvShowData.views,
       updated_at: tvShowData.updatedAt,
       seasons: formattedSeasons,

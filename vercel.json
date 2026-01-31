@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run db:push:ci && npm run build",
+  "buildCommand": "mkdir -p database && npm run db:push:ci && npm run db:seed:all && npm run build",
   "installCommand": "npm ci",
   "framework": "nextjs",
   "regions": ["iad1"]

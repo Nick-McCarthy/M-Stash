@@ -4,6 +4,13 @@ import { GeneralPagination } from "@/components/GeneralPagination";
 import TvShowCard from "@/components/tv-library/TvShowCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,18 +19,59 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { FilterX } from "lucide-react";
 import { useTvShowsWithFilters } from "@/lib/queries/tv-shows";
+import { TvShowFilterDrawer, type TvShowFilterOptions } from "@/components/tv-library/TvShowFilter";
+import { useTags } from "@/lib/queries/tags";
+import { useGenres } from "@/lib/queries/genres";
 
 export default function TvLibrary() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  // Use React Query to fetch TV shows with pagination
+  const [filterOptions, setFilterOptions] = useState<TvShowFilterOptions>({
+    sortBy: "az-asc",
+    tags: [],
+    genres: [],
+  });
+
+  // Build filters object for the query
+  const filters = {
+    tag: filterOptions.tags[0],
+    genre: filterOptions.genres[0],
+    sort: filterOptions.sortBy,
+  };
+
+  // Use React Query to fetch TV shows with filters and pagination
   const {
     data: tvShowsData,
     isLoading,
     error,
-  } = useTvShowsWithFilters(currentPage, itemsPerPage);
+  } = useTvShowsWithFilters(currentPage, itemsPerPage, filters);
+
+  // Fetch all available tags and genres
+  const { data: availableTags = [], isLoading: isLoadingTags } = useTags();
+  const { data: availableGenres = [], isLoading: isLoadingGenres } = useGenres();
+
+  const handleFiltersChange = (newFilters: TvShowFilterOptions) => {
+    setFilterOptions(newFilters);
+    // Reset to first page when filters change
+    setCurrentPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setFilterOptions({
+      sortBy: "az-asc",
+      tags: [],
+      genres: [],
+    });
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters =
+    filterOptions.sortBy !== "az-asc" ||
+    filterOptions.tags.length > 0 ||
+    filterOptions.genres.length > 0;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -56,6 +104,38 @@ export default function TvLibrary() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6">
+        <TooltipProvider>
+          <div className="flex items-center gap-2">
+            <TvShowFilterDrawer
+              filters={filterOptions}
+              onFiltersChange={handleFiltersChange}
+              availableTags={availableTags}
+              availableGenres={availableGenres}
+              isLoadingTags={isLoadingTags}
+              isLoadingGenres={isLoadingGenres}
+            />
+            {hasActiveFilters && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleClearFilters}
+                  >
+                    <FilterX className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Clear All Filters</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
       </div>
 
       {/* Results */}

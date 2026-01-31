@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tagTypes } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { ensureSchema } from "@/lib/db/ensure-schema";
 
 export async function GET() {
   try {
+    // Ensure database schema is initialized before proceeding
+    await ensureSchema();
+    
     const result = await db
       .select({ tagName: tagTypes.tagName })
       .from(tagTypes)

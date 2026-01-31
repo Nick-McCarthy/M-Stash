@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         page: searchParams.get("page"),
         itemsPerPage: searchParams.get("itemsPerPage"),
         tag: searchParams.get("tag"),
+        genre: searchParams.get("genre"),
         search: searchParams.get("search"),
         sort: searchParams.get("sort"),
       });
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
       throw parseError;
     }
 
-    const { page, itemsPerPage, tag, search, sort } = queryParams;
+    const { page, itemsPerPage, tag, genre, search, sort } = queryParams;
 
     // Build conditions array
     const conditions = [];
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest) {
 
     if (tag !== null && tag !== undefined) {
       conditions.push(jsonArrayContains(movies.tags, tag));
+    }
+
+    if (genre !== null && genre !== undefined) {
+      conditions.push(jsonArrayContains(movies.genres, genre));
     }
 
     // Build the where clause
@@ -112,6 +117,7 @@ export async function GET(request: NextRequest) {
         sprite_address: movie.spriteAddress,
         video_address: movie.masterPlaylistAddress,
         tags: parseJsonArray(movie.tags as string),
+        genres: parseJsonArray(movie.genres as string),
         views: movie.views,
         updated_at: movie.updatedAt,
       };

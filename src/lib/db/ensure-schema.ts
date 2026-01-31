@@ -34,8 +34,11 @@ function addColumnIfNotExists(
  * This is useful for serverless environments where the database might not exist at runtime.
  */
 export async function ensureSchema() {
-  // Cache the initialization check to avoid repeated queries
-  if (schemaInitialized) {
+  // On Vercel/serverless, don't cache initialization since each function invocation is fresh
+  // This ensures the schema is always checked/initialized on each request
+  const isVercel = process.env.VERCEL === "1";
+  
+  if (!isVercel && schemaInitialized) {
     return;
   }
 
@@ -56,11 +59,14 @@ export async function ensureSchema() {
       await checkAndAddMissingColumns();
     }
 
-    schemaInitialized = true;
+    if (!isVercel) {
+      schemaInitialized = true;
+    }
   } catch (error) {
     console.error("Error checking/initializing schema:", error);
-    // Don't throw - let the calling code handle the error
-    // The database connection might fail, but we shouldn't block everything
+    console.error("Schema initialization error details:", error instanceof Error ? error.stack : "No stack trace");
+    // Re-throw the error so calling code can handle it properly
+    throw error;
   }
 }
 

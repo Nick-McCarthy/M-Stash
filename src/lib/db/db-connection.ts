@@ -5,12 +5,50 @@ import path from "path";
 import fs from "fs";
 
 // Database path - can be configured via environment variable
-const dbPath = process.env.SQLITE_DB_PATH || "./database/media-library.db";
+// On Vercel (serverless), use /tmp which is writable and persists for the function invocation
+// In other environments, use the configured path or default to ./database/media-library.db
+const isVercel = process.env.VERCEL === "1";
+const defaultDbPath = isVercel 
+  ? "/tmp/media-library.db" 
+  : "./database/media-library.db";
+const dbPath = process.env.SQLITE_DB_PATH || defaultDbPath;
 
-// Ensure database directory exists
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+// On Vercel, try to copy the database from build output to /tmp if it exists
+// This allows us to use the seeded database from build time (including demo user)
+if (isVercel && !fs.existsSync(dbPath)) {
+  // Try multiple possible locations for the build database
+  const possiblePaths = [
+    path.join(process.cwd(), "database", "media-library.db"),
+    path.join(process.cwd(), ".next", "database", "media-library.db"),
+    path.join("/var/task", "database", "media-library.db"), // Vercel build output location
+  ];
+  
+  let copied = false;
+  for (const buildDbPath of possiblePaths) {
+    if (fs.existsSync(buildDbPath)) {
+      try {
+        fs.copyFileSync(buildDbPath, dbPath);
+        console.log(`✓ Copied seeded database from ${buildDbPath} to ${dbPath}`);
+        copied = true;
+        break;
+      } catch (copyError) {
+        console.warn(`Could not copy from ${buildDbPath}:`, copyError);
+      }
+    }
+  }
+  
+  if (!copied) {
+    console.log("⚠️  No seeded database found in build output, will create fresh database");
+    console.log("   (Demo user will be created via seed script on first API call)");
+  }
+}
+
+// Ensure database directory exists (only needed for non-Vercel paths)
+if (!isVercel) {
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
 }
 
 // Create SQLite database connection
@@ -20,8 +58,10 @@ try {
 
   // Enable foreign keys (important for SQLite)
   sqlite.pragma("foreign_keys = ON");
-  // Enable WAL mode for better concurrency
-  sqlite.pragma("journal_mode = WAL");
+  // Enable WAL mode for better concurrency (but not on Vercel as it can cause issues)
+  if (!isVercel) {
+    sqlite.pragma("journal_mode = WAL");
+  }
 
   console.log(`Connected to SQLite database at ${dbPath}`);
 } catch (err) {

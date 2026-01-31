@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Setup error:", error);
+    console.error("Setup error stack:", error instanceof Error ? error.stack : "No stack trace");
+    console.error("Setup error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -63,10 +65,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Include more details in the error response for debugging
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     return NextResponse.json(
       {
         error: "Failed to create master account",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: errorMessage,
+        // Only include stack in development
+        ...(process.env.NODE_ENV === "development" && errorStack ? { stack: errorStack } : {}),
       },
       { status: 500 }
     );

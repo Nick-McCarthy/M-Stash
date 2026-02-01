@@ -11,28 +11,28 @@ const mediaTypes = [
     description: "Browse your comic collection and read chapters",
     href: "/comic-library",
     icon: ImageIcon,
-    color: "text-blue-500",
+    color: "text-foreground",
   },
   {
     name: "Movies",
     description: "Watch your favorite films and movies",
     href: "/movie-library",
     icon: Clapperboard,
-    color: "text-red-500",
+    color: "text-foreground",
   },
   {
     name: "TV Shows",
     description: "Stream TV series and episodes",
     href: "/tv-library",
     icon: Play,
-    color: "text-green-500",
+    color: "text-foreground",
   },
   {
     name: "Ebooks",
     description: "Read digital books and manage your library",
     href: "/ebook-library",
     icon: BookOpen,
-    color: "text-purple-500",
+    color: "text-foreground",
   },
 ];
 

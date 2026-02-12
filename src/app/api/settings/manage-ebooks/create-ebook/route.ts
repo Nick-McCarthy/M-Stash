@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { ebooks } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { requireAuth } from "@/lib/auth-helpers";
 
 const s3Client = new S3Client({
   region: process.env.S3_REGION || "us-east-1",
@@ -15,6 +16,10 @@ const s3Client = new S3Client({
 const BUCKET_NAME = process.env.S3_BUCKET_NAME!;
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const formData = await request.formData();
     const file = formData.get("ebook_file") as File;

@@ -233,6 +233,8 @@ export default function EbookReaderPage() {
             height: "100%",
             spread: "none",
             allowScriptedContent: false, // Disable scripts for security (most EPUBs don't need them)
+            flow: "paginated", // Better for mobile - single page view
+            manager: "default",
           });
           setRendition(newRendition);
 
@@ -1149,11 +1151,12 @@ export default function EbookReaderPage() {
     <div className="flex flex-col h-screen bg-background" id="ebook-reader-main">
       {/* Header */}
       <div className="border-b border-border bg-background">
-        <div className="px-4 py-3 lg:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <Breadcrumb>
+        <div className="px-2 sm:px-4 py-2 sm:py-3 lg:px-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+              <div className="min-w-0 flex-1">
+                {/* Breadcrumb - hidden on mobile */}
+                <Breadcrumb className="hidden sm:block">
                   <BreadcrumbList>
                     <BreadcrumbItem>
                       <BreadcrumbLink href="/">Home</BreadcrumbLink>
@@ -1170,12 +1173,16 @@ export default function EbookReaderPage() {
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
-                <h1 className="text-lg font-semibold mt-1">{ebook.title}</h1>
-                <p className="text-sm text-muted-foreground">{ebook.author}</p>
+                <h1 className="text-sm sm:text-lg font-semibold mt-0 sm:mt-1 truncate">
+                  {ebook.title}
+                </h1>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                  {ebook.author}
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <Dialog
                 open={bookmarkDialogOpen}
                 onOpenChange={setBookmarkDialogOpen}
@@ -1183,7 +1190,7 @@ export default function EbookReaderPage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="h-8 w-8 sm:h-9 sm:w-9 p-0">
                         <BookmarkPlus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
@@ -1193,6 +1200,7 @@ export default function EbookReaderPage() {
                   </TooltipContent>
                 </Tooltip>
                 <DialogContent
+                  className="sm:max-w-md w-[calc(100%-2rem)] mx-auto"
                   onOpenAutoFocus={(e) => {
                     // Prevent auto-focus on open to avoid focus issues
                     e.preventDefault();
@@ -1266,7 +1274,7 @@ export default function EbookReaderPage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DrawerTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="h-8 w-8 sm:h-9 sm:w-9 p-0">
                         <Menu className="h-4 w-4" />
                       </Button>
                     </DrawerTrigger>
@@ -1310,7 +1318,7 @@ export default function EbookReaderPage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DrawerTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="h-8 w-8 sm:h-9 sm:w-9 p-0">
                         <Bookmark className="h-4 w-4" />
                       </Button>
                     </DrawerTrigger>
@@ -1396,19 +1404,19 @@ export default function EbookReaderPage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Reader */}
-        <div className="flex-1 relative flex justify-center h-full">
-          <div className="w-full max-w-[800px] h-full relative">
+        <div className="flex-1 relative flex justify-center h-full w-full overflow-hidden">
+          <div className="w-full max-w-full sm:max-w-[800px] h-full relative overflow-hidden">
             <div
               ref={viewerRef}
-              className="w-full h-full"
+              className="w-full h-full overflow-hidden"
               style={{
                 backgroundColor: theme === "dark" ? "#1a1a1a" : "#ffffff",
               }}
             />
 
-            {/* Left click area for previous page */}
+            {/* Left click area for previous page - larger on mobile for easier tapping */}
             <div
-              className="absolute left-0 top-0 w-1/3 h-full cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              className="absolute left-0 top-0 w-2/5 sm:w-1/3 h-full cursor-pointer active:bg-black/10 dark:active:bg-white/10 sm:hover:bg-black/5 sm:dark:hover:bg-white/5 transition-colors touch-none"
               onClick={handlePrevPage}
               aria-label="Previous page"
               role="button"
@@ -1421,9 +1429,9 @@ export default function EbookReaderPage() {
               }}
             />
 
-            {/* Right click area for next page */}
+            {/* Right click area for next page - larger on mobile for easier tapping */}
             <div
-              className="absolute right-0 top-0 w-1/3 h-full cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              className="absolute right-0 top-0 w-2/5 sm:w-1/3 h-full cursor-pointer active:bg-black/10 dark:active:bg-white/10 sm:hover:bg-black/5 sm:dark:hover:bg-white/5 transition-colors touch-none"
               onClick={handleNextPage}
               aria-label="Next page"
               role="button"

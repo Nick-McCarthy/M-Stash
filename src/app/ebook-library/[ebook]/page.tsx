@@ -1155,21 +1155,24 @@ export default function EbookReaderPage() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <div className="min-w-0 flex-1">
-                {/* Breadcrumb - hidden on mobile */}
-                <Breadcrumb className="hidden sm:block">
-                  <BreadcrumbList>
+                <Breadcrumb>
+                  <BreadcrumbList className="flex-wrap">
                     <BreadcrumbItem>
-                      <BreadcrumbLink href="/">Home</BreadcrumbLink>
+                      <BreadcrumbLink href="/" className="text-xs sm:text-sm">
+                        Home
+                      </BreadcrumbLink>
                     </BreadcrumbItem>
-                    <BreadcrumbSeparator />
+                    <BreadcrumbSeparator className="text-xs sm:text-sm" />
                     <BreadcrumbItem>
-                      <BreadcrumbLink href="/ebook-library">
+                      <BreadcrumbLink href="/ebook-library" className="text-xs sm:text-sm">
                         Ebook Library
                       </BreadcrumbLink>
                     </BreadcrumbItem>
-                    <BreadcrumbSeparator />
+                    <BreadcrumbSeparator className="text-xs sm:text-sm" />
                     <BreadcrumbItem>
-                      <BreadcrumbPage>{ebook.title}</BreadcrumbPage>
+                      <BreadcrumbPage className="text-xs sm:text-sm truncate max-w-[150px] sm:max-w-none">
+                        {ebook.title}
+                      </BreadcrumbPage>
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
